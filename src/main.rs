@@ -64,41 +64,29 @@ fn split_records(table_content: &str) -> Vec<String> {
 
 fn split_fields(record: &str) -> Vec<String> {
     let mut fields = Vec::new();
-    let mut current_field = String::new();
-
-    for line in record.lines() {
-        if line.starts_with("|") {
-            // If there's an existing field, push it
-            if !current_field.is_empty() {
-                fields.push(current_field.trim().to_string());
-            }
-            // Start a new field without the leading '|'
-            current_field = line[1..].to_string();
-        } else {
-            // Append the line (trimmed) to the current field (with a space)
-            current_field.push(' ');
-            current_field.push_str(line.trim());
-        }
+    record.split("|").for_each(|str| fields.push(str.trim().to_string()));
+    
+    //if the first slice doesn't contain anything, skip it.
+    if fields[0].is_empty() || fields[0].starts_with("\n") {
+        return fields[1..].to_vec();
     }
-    if !current_field.is_empty() {
-        fields.push(current_field.trim().to_string());
-    }
-    fields
+    
+    return fields;
 }
 
 
 fn map_record_to_company(record: &str) -> Company {
     
-    let matches = split_fields(&record);
+    let fields = split_fields(&record);
     
     let company = Company {
-        name: matches[0].clone(),
-        location: matches[1].clone(),
-        technologies: matches[2]
+        name: fields[0].clone(),
+        location: fields[1].clone(),
+        technologies: fields[2]
             .split(",")
             .map(|s| s.trim().to_string())
             .collect(),
-        website: matches[3].split("[").next().unwrap().to_string()
+        website: fields[3].split("[").next().unwrap().to_string()
     };
     
     return company;
