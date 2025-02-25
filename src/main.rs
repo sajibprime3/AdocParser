@@ -7,7 +7,7 @@ struct Company {
     name: String,
     location: String,
     technologies: Vec<String>,
-    website: String,
+    website: Vec<(String, String)>,
 }
 
 fn main() {
@@ -75,6 +75,15 @@ fn split_fields(record: &str) -> Vec<String> {
 }
 
 
+fn extract_links(text: &str) -> Vec<(String, String)> {
+    let link_re = Regex::new(r"(https?://[^\s\[]+)\[([^\]]+)\]").unwrap();
+    link_re
+        .captures_iter(text)
+        .map(|cap| (cap[1].to_string(), cap[2].to_string()))
+        .collect()
+}
+
+
 fn map_record_to_company(record: &str) -> Company {
     
     let fields = split_fields(&record);
@@ -86,8 +95,9 @@ fn map_record_to_company(record: &str) -> Company {
             .split(",")
             .map(|s| s.trim().to_string())
             .collect(),
-        website: fields[3].split("[").next().unwrap().to_string()
+        website: extract_links(&fields[3])
     };
+    
     
     return company;
 }
