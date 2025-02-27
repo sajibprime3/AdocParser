@@ -1,14 +1,19 @@
 use regex::Regex;
 use reqwest::blocking::Client;
 use serde::Serialize;
+mod utils;
+use utils::parser::AdocParser;
+
 
 #[derive(Serialize, Debug)]
-struct Company {
+struct CompanyRecord {
     name: String,
     location: String,
     technologies: Vec<String>,
     website: Vec<(String, String)>,
 }
+
+
 
 fn main() {
     let adoc_url = "https://raw.githubusercontent.com/MBSTUPC/tech-companies-in-bangladesh/refs/heads/master/README.adoc";
@@ -16,51 +21,22 @@ fn main() {
     
     let adoc_content = client.get(adoc_url).send().unwrap().text().unwrap();
     
-    let orders = split_orders(&adoc_content);
+    let parser =AdocParser::new(adoc_content);
     
-    let mut records: Vec<String> = vec![];
-    for tc in orders {
-        records.append(&mut split_records(&tc));
-        
-    }
+    let records = parser.parse_to_records();
     
-    
-    let mut companies: Vec<Company> = vec![];
+    let mut companies: Vec<CompanyRecord> = vec![];
     for record in records {
         companies.push(map_record_to_company(&record));
     }
     
     companies.iter().for_each(|company| println!("{:?}", company));
     
+    
+    
 }
 
-fn split_orders(adoc_content: &str) -> Vec<String> {
-    let table_re = Regex::new(r"(?ms)\|===\s*\n(.*?)\|===")
-        .expect("Invalid Regex!");
-    
-    let mut orders: Vec<String> = vec![];
-    for cap in table_re.captures_iter(&adoc_content) {
-        let table_content = cap[1].trim().to_string();
-        orders.push(table_content);
-    }
-    
-    return orders;
-}
 
-fn split_records(table_content: &str) -> Vec<String> {
-    let mut records:Vec<String> = vec![];
-    table_content.split("\n\n").for_each(|str| records.push(str.to_string()));
-    
-    
-    // If the first record is the header row, skip it.
-    if let Some(first) = records.first() {
-        if first.contains("Company Name") {
-            return records[1..].to_vec();
-        }
-    }
-    
-    return records;
-}
 
 fn split_fields(record: &str) -> Vec<String> {
     let mut fields = Vec::new();
@@ -84,11 +60,11 @@ fn extract_links(text: &str) -> Vec<(String, String)> {
 }
 
 
-fn map_record_to_company(record: &str) -> Company {
+fn map_record_to_company(record: &str) -> CompanyRecord {
     
     let fields = split_fields(&record);
     
-    let company = Company {
+    let company = CompanyRecord {
         name: fields[0].clone(),
         location: fields[1].clone(),
         technologies: fields[2]
